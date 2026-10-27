@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: kpc-fulfillment-dashboard
+    rootDir: example-dashboard-nextjs
+    runtime: node
+    plan: starter            # persistent disks need a paid plan
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "22.13.0"
+      - key: DB_PATH
+        value: /var/data/dashboard.db
+      - key: KPC_WEBHOOK_SECRET
+        sync: false
+      - key: KPC_API_KEY
+        sync: false
+      - key: KPC_PULL_URL
+        sync: false
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1

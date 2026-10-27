@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fulfillment Dashboard (Example)</title>
+<style>
+  :root { --bg:#0e1116; --panel:#161b22; --line:#262d36; --ink:#e6edf3; --muted:#8b949e;
+          --blue:#58a6ff; --green:#3fb950; --amber:#d29922; --red:#f85149; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 -apple-system,"Helvetica Neue",Arial,sans-serif; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; margin:0; }
+  header .sub { color:var(--muted); font-size:12px; }
+  .live { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--red); }
+  .dot.on { background:var(--green); box-shadow:0 0 0 0 rgba(63,185,80,.7); animation:pulse 1.6s infinite; }
+  @keyframes pulse { 70% { box-shadow:0 0 0 8px rgba(63,185,80,0); } 100% { box-shadow:0 0 0 0 rgba(63,185,80,0); } }
+  main { padding:20px 24px; display:grid; gap:18px; }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .kpi { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .kpi .v { font-size:28px; font-weight:700; margin-top:2px; }
+  .kpi .l { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .grid { display:grid; grid-template-columns: 1.7fr 1fr; gap:18px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  .card h2 { font-size:13px; margin:0; padding:12px 16px; border-bottom:1px solid var(--line); text-transform:uppercase; letter-spacing:.5px; color:var(--muted); }
+  table { width:100%; border-collapse:collapse; }
+  th, td { text-align:left; padding:9px 14px; border-bottom:1px solid var(--line); font-size:13px; white-space:nowrap; }
+  th { color:var(--muted); font-weight:500; font-size:12px; }
+  .pill { display:inline-block; padding:1px 9px; border-radius:20px; font-size:12px; font-weight:600; }
+  .pill.ph { background:rgba(210,153,34,.15); color:var(--amber); }
+  .pill.del { background:rgba(63,185,80,.15); color:var(--green); }
+  tr.flash td { animation: flash 2.5s ease-out; }
+  @keyframes flash { 0% { background:rgba(88,166,255,.35); } 100% { background:transparent; } }
+  .log { max-height:520px; overflow:auto; }
+  .log .row { padding:9px 14px; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .log .row.new { animation: flash 2.5s ease-out; }
+  .log .meta { color:var(--muted); font-size:11.5px; }
+  .src { font-weight:600; }
+  .src.webhook { color:var(--blue); } .src.catch-up { color:var(--amber); } .src.first { color:var(--muted); }
+  .lat { color:var(--green); font-weight:600; }
+  .empty { padding:30px; text-align:center; color:var(--muted); }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Fulfillment Dashboard <span class="muted" style="font-weight:400">— example client system</span></h1>
+    <div class="sub">Receives KPC shipment updates by webhook · live screen updates via Server-Sent Events</div>
+  </div>
+  <div class="live"><span class="dot" id="dot"></span><span id="liveText">connecting…</span></div>
+</header>
+
+<main>
+  <div class="kpis">
+    <div class="kpi"><div class="l">In PH Warehouse</div><div class="v" id="kPh">0</div></div>
+    <div class="kpi"><div class="l">Delivered</div><div class="v" id="kDel">0</div></div>
+    <div class="kpi"><div class="l">Fulfillment rate</div><div class="v" id="kRate">–</div></div>
+    <div class="kpi"><div class="l">Avg PH Warehouse → Delivered</div><div class="v" id="kAvg">–</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Shipments</h2>
+      <table>
+        <thead><tr><th>Shipment code</th><th>Client</th><th>Status</th><th>Boxes</th><th>CBM</th><th>Pickup</th><th>PH Warehouse</th><th>Delivered</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty">No shipments yet. Tag one as PH Warehouse on the KPC website.</div>
+    </div>
+    <div class="card">
+      <h2>Incoming updates</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const shipments = new Map();
+const fmt = (iso) => iso ? new Date(iso).toLocaleString("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "–";
+const esc = (v) => String(v ?? "–").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function render(flashId) {
+  const list = [...shipments.values()].sort((a, b) =>
+    Date.parse(b.delivered_at ?? b.ph_warehouse_tagged_at ?? 0) - Date.parse(a.delivered_at ?? a.ph_warehouse_tagged_at ?? 0));
+  document.getElementById("empty").style.display = list.length ? "none" : "block";
+  document.getElementById("rows").innerHTML = list.map((s) => `
+    <tr class="${s.shipment_id === flashId ? "flash" : ""}">
+      <td><b>${esc(s.shipment_code)}</b></td>
+      <td>${esc(s.client_name)}</td>
+      <td><span class="pill ${s.delivery_status === "Delivered" ? "del" : "ph"}">${esc(s.delivery_status)}</span></td>
+      <td>${esc(s.box_quantity ?? s.quantity)}</td>
+      <td>${esc(s.total_cbm)}</td>
+      <td>${esc(s.pickup_warehouse)}</td>
+      <td>${fmt(s.ph_warehouse_tagged_at)}</td>
+      <td>${fmt(s.delivered_at)}</td>
+    </tr>`).join("");
+
+  const ph = list.filter((s) => s.delivery_status === "PH Warehouse").length;
+  const delivered = list.filter((s) => s.delivered_at);
+  const arrived = list.filter((s) => s.ph_warehouse_tagged_at).length;
+  document.getElementById("kPh").textContent = ph;
+  document.getElementById("kDel").textContent = delivered.length;
+  document.getElementById("kRate").textContent = arrived ? Math.round((delivered.length / arrived) * 100) + "%" : "–";
+  const spans = delivered.filter((s) => s.ph_warehouse_tagged_at)
+    .map((s) => (Date.parse(s.delivered_at) - Date.parse(s.ph_warehouse_tagged_at)) / 3600000);
+  const avgH = spans.length ? spans.reduce((a, b) => a + b, 0) / spans.length : null;
+  document.getElementById("kAvg").textContent = avgH === null ? "–" : avgH < 48 ? avgH.toFixed(1) + " h" : (avgH / 24).toFixed(1) + " d";
+}
+
+function logRow(e, isNew) {
+  const src = e.source === "first load" ? "first" : e.source;
+  const lat = e.latency_ms != null ? ` · <span class="lat">arrived ${(Math.max(0, e.latency_ms) / 1000).toFixed(2)} s after the tag</span>` : "";
+  return `<div class="row ${isNew ? "new" : ""}">
+    <span class="src ${src}">${esc(e.source)}</span> · ${esc(e.type)} · <b>${esc(e.code)}</b><br>
+    <span class="meta">${new Date(e.at).toLocaleTimeString("en-PH", { timeZone: "Asia/Manila" })} · ${esc(e.result)}</span>${lat}
+  </div>`;
+}
+
+const es = new EventSource("/live");
+es.onopen = () => { document.getElementById("dot").classList.add("on"); document.getElementById("liveText").textContent = "Live"; };
+es.onerror = () => { document.getElementById("dot").classList.remove("on"); document.getElementById("liveText").textContent = "reconnecting…"; };
+es.addEventListener("init", (m) => {
+  const d = JSON.parse(m.data);
+  shipments.clear(); d.shipments.forEach((s) => shipments.set(s.shipment_id, s));
+  document.getElementById("log").innerHTML = d.log.map((e) => logRow(e, false)).join("");
+  render();
+});
+es.addEventListener("shipment", (m) => { const s = JSON.parse(m.data); shipments.set(s.shipment_id, s); render(s.shipment_id); });
+es.addEventListener("log", (m) => { document.getElementById("log").insertAdjacentHTML("afterbegin", logRow(JSON.parse(m.data), true)); });
+</script>
+</body>
+</html>

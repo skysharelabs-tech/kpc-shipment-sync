@@ -1,0 +1,23 @@
+{
+  "name": "kpc-example-dashboard-nextjs",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 4545",
+    "build": "next build",
+    "start": "next start -p ${PORT:-4545}"
+  },
+  "dependencies": {
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}

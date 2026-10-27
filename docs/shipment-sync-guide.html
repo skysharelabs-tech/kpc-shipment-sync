@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>KPC Shipment Sync — Integration Guide</title>
+<style>
+  @page { size: A4; margin: 16mm 15mm 16mm 15mm; }
+  :root {
+    --ink: #1b1f24; --muted: #5b6470; --line: #dde2e8; --soft: #f4f6f8;
+    --accent: #c8102e; --accent-soft: #fdecee; --code: #0f172a;
+    --ok: #0f7b3f; --ok-soft: #e8f5ee; --blue: #1d4ed8; --blue-soft: #eaf0fd;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: var(--ink);
+         font-size: 10pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 26pt; margin: 0 0 2pt; letter-spacing: -0.4px; }
+  h2 { font-size: 15pt; margin: 0 0 8pt; padding-bottom: 5pt; border-bottom: 2px solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 14pt 0 5pt; break-after: avoid; }
+  p { margin: 0 0 7pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+  li { margin-bottom: 3pt; }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt;
+         background: var(--soft); padding: 0.5pt 3pt; border-radius: 3px; }
+  pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 7.9pt; line-height: 1.45;
+        background: var(--code); color: #e2e8f0; padding: 8pt 11pt; border-radius: 7px;
+        white-space: pre-wrap; word-break: break-word; margin: 4pt 0 10pt; break-inside: avoid; }
+  pre .c { color: #94a3b8; } pre .k { color: #fbbf24; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 9.3pt; }
+  th, td { text-align: left; vertical-align: top; padding: 3.5pt 6pt; border-bottom: 1px solid var(--line); }
+  th { background: var(--soft); font-weight: 600; }
+  tr { break-inside: avoid; }
+  section { break-before: page; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+  .callout { border-radius: 7px; padding: 9pt 12pt; margin: 6pt 0 12pt; break-inside: avoid; }
+  .callout > b:first-child { display: block; margin-bottom: 2pt; }
+  .red { background: var(--accent-soft); border-left: 4px solid var(--accent); }
+  .green { background: var(--ok-soft); border-left: 4px solid var(--ok); }
+  .blue { background: var(--blue-soft); border-left: 4px solid var(--blue); }
+  .grey { background: var(--soft); border-left: 4px solid #8a94a3; }
+
+  .cover { padding: 6pt 0 10pt 16pt; border-left: 6px solid var(--accent); margin-bottom: 14pt; }
+  .cover .sub { font-size: 14pt; margin-bottom: 6pt; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9pt; margin: 10pt 0 14pt; }
+  .stat { border: 1px solid var(--line); border-radius: 8px; padding: 10pt 11pt; break-inside: avoid; }
+  .stat .big { font-size: 17pt; font-weight: 700; color: var(--accent); line-height: 1.15; }
+  .stat .lbl { font-size: 9pt; color: var(--muted); margin-top: 2pt; }
+
+  .flow { display: flex; gap: 6pt; align-items: stretch; margin: 8pt 0 12pt; }
+  .flow .n { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8pt 9pt; font-size: 9pt; background: #fff; }
+  .flow .n b { display: block; font-size: 9.6pt; margin-bottom: 2pt; }
+  .flow .n.us { border-top: 4px solid var(--accent); }
+  .flow .n.you { border-top: 4px solid var(--blue); }
+  .flow .ar { align-self: center; color: var(--muted); font-weight: 700; font-size: 14pt; }
+  .legend { font-size: 8.6pt; color: var(--muted); margin-top: -6pt; margin-bottom: 10pt; }
+  .legend span { display: inline-block; width: 9pt; height: 9pt; border-radius: 2px; vertical-align: -1pt; margin: 0 3pt 0 8pt; }
+
+  .steps { counter-reset: s; margin: 6pt 0 10pt; }
+  .step { display: grid; grid-template-columns: 26pt 1fr; gap: 9pt; margin-bottom: 6pt; break-inside: avoid; }
+  .step .num { counter-increment: s; width: 24pt; height: 24pt; border-radius: 50%; background: var(--accent); color: #fff;
+               font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 11pt; }
+  .step .num::before { content: counter(s); }
+  .step h4 { margin: 3pt 0 2pt; font-size: 10.8pt; }
+  .step p { margin: 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; margin: 4pt 0 12pt; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 9pt 11pt; break-inside: avoid; }
+  .card h4 { margin: 0 0 4pt; font-size: 10.3pt; }
+  .card ul { margin: 0; }
+  .tag { display: inline-block; font-size: 7.8pt; font-weight: 700; letter-spacing: 0.3px; padding: 1pt 6pt;
+         border-radius: 10px; vertical-align: 1pt; }
+  .tag.must { background: var(--accent-soft); color: var(--accent); }
+  .tag.rec { background: var(--blue-soft); color: var(--blue); }
+  .check li { list-style: none; margin-left: -14pt; }
+  .check li::before { content: "☐  "; font-size: 11pt; }
+  table.fields td, table.fields th { padding: 2.5pt 6pt; font-size: 8.7pt; }
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 2pt 18pt; font-size: 9.6pt; margin: 4pt 0 0; padding: 0; list-style: none; }
+  .toc li { border-bottom: 1px dotted var(--line); padding: 2pt 0; }
+  .toc li span { float: right; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ============================ PAGE 1 ============================ -->
+<div class="cover">
+  <h1>KPC Shipment Sync</h1>
+  <div class="sub">Integration guide for your fulfillment dashboard</div>
+  <div class="muted small">Version 1.1 · 20 October 2026 · Source: KPC Express website (kpcexpress.com)</div>
+</div>
+
+<p><b>What this does:</b> when a KPC admin tags a shipment as <b>PH Warehouse</b> or <b>Delivered</b> on the KPC website,
+the shipment's details are <b>pushed to your system instantly</b>. You don't need to poll or ask for updates; they come to you.</p>
+
+<div class="stats">
+  <div class="stat"><div class="big">&lt; 1 second</div><div class="lbl">from the admin's click to your server<br>(measured: 0.03 s)</div></div>
+  <div class="stat"><div class="big">2 events</div><div class="lbl">PH Warehouse<br>Delivered</div></div>
+  <div class="stat"><div class="big">0 missed</div><div class="lbl">automatic retries for about 7 hours,<br>plus a catch-up API</div></div>
+</div>
+
+<h3 style="margin-top:4pt">How an update reaches your dashboard</h3>
+<div class="flow">
+  <div class="n us"><b>1. Admin tags</b>PH Warehouse or Delivered on the KPC website</div>
+  <div class="ar">›</div>
+  <div class="n us"><b>2. KPC sends</b>an HTTPS POST to your URL, signed with your secret</div>
+  <div class="ar">›</div>
+  <div class="n you"><b>3. You save</b>the shipment in your database and reply <code>200</code></div>
+  <div class="ar">›</div>
+  <div class="n you"><b>4. You refresh</b>your open dashboard screens (optional, your WebSocket/SSE)</div>
+</div>
+<div class="legend"><span style="background:var(--accent)"></span>KPC side (done) <span style="background:var(--blue)"></span>Your side (to build)</div>
+
+<div class="callout green"><b>Real-time push, not polling</b>
+This is a <i>webhook</i>: KPC calls your server the moment the status changes. The Pull API (page 6)
+is only a <b>safety net</b> for your first data load and for anything missed while your server was down.</div>
+
+<h3>Contents</h3>
+<ul class="toc">
+  <li>Quick start <span>2</span></li>
+  <li>Step-by-step integration <span>3</span></li>
+  <li>Complete example endpoint <span>4</span></li>
+  <li>What you receive <span>5</span></li>
+  <li>Pull API (first load and catch-up) <span>6</span></li>
+  <li>Testing and go-live <span>7</span></li>
+  <li>Troubleshooting and FAQ <span>8</span></li>
+  <li>Code in PHP and Python <span>9</span></li>
+</ul>
+
+<!-- ============================ QUICK START ============================ -->
+<section>
+<h2>Quick start</h2>
+
+<div class="two">
+  <div class="card">
+    <h4>You send us</h4>
+    <ul>
+      <li><b>Webhook URL</b>, HTTPS, accepts <code>POST</code> + JSON<br><span class="muted small">e.g. https://dashboard.yourco.com/webhooks/kpc</span></li>
+      <li><b>Staging URL</b> (optional) for testing</li>
+      <li><b>Fields</b> you need (page 5)</li>
+      <li><b>History</b>: how many months of past data</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>We send you (secure channel, never by chat)</h4>
+    <ul>
+      <li><b>Signing secret</b>: proves a request came from KPC</li>
+      <li><b>API key</b>: for the Pull API</li>
+      <li><b>Pull API URL</b></li>
+      <li>Test events to your staging URL</li>
+    </ul>
+  </div>
+</div>
+
+<h3>What your endpoint must do</h3>
+<table>
+  <tr><th style="width:5%">#</th><th style="width:27%">Do this</th><th>Why</th><th style="width:13%"></th></tr>
+  <tr><td>1</td><td><b>Check the signature</b></td><td>So nobody else can send you fake "Delivered" updates.</td><td><span class="tag must">REQUIRED</span></td></tr>
+  <tr><td>2</td><td><b>Ignore duplicates</b> by <code>event_id</code></td><td>The same event can occasionally arrive twice.</td><td><span class="tag must">REQUIRED</span></td></tr>
+  <tr><td>3</td><td><b>Keep only newer data</b></td><td>Compare <code>occurred_at</code>, so an older, retried event never overwrites newer data.</td><td><span class="tag must">REQUIRED</span></td></tr>
+  <tr><td>4</td><td><b>Reply <code>200</code> within 10 seconds</b></td><td>Anything else is treated as failed and sent again.</td><td><span class="tag must">REQUIRED</span></td></tr>
+  <tr><td>5</td><td><b>Push to open screens</b></td><td>So dashboards already open update without a refresh.</td><td><span class="tag rec">RECOMMENDED</span></td></tr>
+</table>
+
+<h3>One update, start to finish</h3>
+<pre><span class="c"># What KPC sends to your URL</span>
+POST /webhooks/kpc
+Content-Type: application/json
+X-KPC-Event:      shipment.delivered
+X-KPC-Event-Id:   a824173b-a92d-430a-8868-c093e5b4be54
+X-KPC-Timestamp:  1760942575
+X-KPC-Signature:  sha256=5f0c2e…
+
+{ "event": "shipment.delivered", "event_id": "a824173b-…", "occurred_at": "2026-10-20T06:42:55+00:00",
+  "shipment": { "shipment_id": 14648, "shipment_code": "KPC 509509EC-9123", "delivery_status": "Delivered",
+                "ph_warehouse_tagged_at": "2026-10-19T02:10:03+00:00", "delivered_at": "2026-10-20T06:42:55+00:00", … } }
+
+<span class="c"># What you reply</span>
+HTTP/1.1 200 OK</pre>
+</section>
+
+<!-- ============================ STEP BY STEP ============================ -->
+<section>
+<h2>Step-by-step integration</h2>
+
+<div class="steps">
+  <div class="step"><div class="num"></div><div>
+    <h4>Create two tables in your database</h4>
+    <p>One for shipments (what the dashboard shows), one for events (to skip duplicates).</p>
+  </div></div>
+</div>
+<pre><span class="k">CREATE TABLE</span> kpc_shipments (
+  shipment_id            BIGINT PRIMARY KEY,     <span class="c">-- KPC's ID, never changes</span>
+  shipment_code          TEXT,
+  delivery_status        TEXT,
+  ph_warehouse_tagged_at TIMESTAMPTZ,
+  delivered_at           TIMESTAMPTZ,
+  data                   JSONB,                  <span class="c">-- the full shipment object, for any other field</span>
+  last_event_at          TIMESTAMPTZ NOT NULL    <span class="c">-- occurred_at of the last event applied</span>
+);
+<span class="k">CREATE TABLE</span> kpc_events (
+  event_id    UUID PRIMARY KEY,
+  received_at TIMESTAMPTZ DEFAULT now()
+);</pre>
+<p class="muted small">PostgreSQL shown. MySQL works the same way: use <code>JSON</code>, <code>DATETIME</code> and <code>INSERT … ON DUPLICATE KEY UPDATE</code>.</p>
+
+<div class="steps" style="counter-reset: s 1">
+  <div class="step"><div class="num"></div><div>
+    <h4>Add a POST endpoint and verify the signature</h4>
+    <p>Read the <b>raw body</b> (before JSON parsing). Compute
+      <code>HMAC-SHA256(secret, timestamp + "." + rawBody)</code> in hex and compare it with
+      <code>X-KPC-Signature</code> (after <code>sha256=</code>). Reject it if it doesn't match, or if the timestamp is more than 5 minutes old.</p>
+  </div></div>
+  <div class="step"><div class="num"></div><div>
+    <h4>Skip duplicates</h4>
+    <p>Insert the <code>event_id</code> into <code>kpc_events</code>. If it's already there, reply <code>200</code> and stop.</p>
+  </div></div>
+  <div class="step"><div class="num"></div><div>
+    <h4>Save the shipment, newer data only</h4>
+    <p>Upsert by <code>shipment_id</code>, but only when the event's <code>occurred_at</code> is newer than <code>last_event_at</code>.</p>
+  </div></div>
+</div>
+<pre><span class="k">INSERT INTO</span> kpc_shipments (shipment_id, shipment_code, delivery_status, ph_warehouse_tagged_at,
+                           delivered_at, data, last_event_at)
+<span class="k">VALUES</span> ($1, $2, $3, $4, $5, $6, $7)
+<span class="k">ON CONFLICT</span> (shipment_id) <span class="k">DO UPDATE SET</span>
+  shipment_code = EXCLUDED.shipment_code,   delivery_status = EXCLUDED.delivery_status,
+  ph_warehouse_tagged_at = EXCLUDED.ph_warehouse_tagged_at,
+  delivered_at = EXCLUDED.delivered_at,     data = EXCLUDED.data,
+  last_event_at = EXCLUDED.last_event_at
+<span class="k">WHERE</span> kpc_shipments.last_event_at &lt; EXCLUDED.last_event_at;   <span class="c">-- older events can't overwrite</span></pre>
+
+<div class="steps" style="counter-reset: s 4">
+  <div class="step"><div class="num"></div><div>
+    <h4>Reply <code>200</code> and refresh open dashboards</h4>
+    <p>Reply right away. Then, if your dashboard uses WebSockets, SSE, Pusher, or Firebase/Supabase Realtime, broadcast the
+      updated shipment so open screens update live. Any slow work (reports, totals) runs after the reply.</p>
+  </div></div>
+  <div class="step"><div class="num"></div><div>
+    <h4>Load existing data once, then add a safety net</h4>
+    <p>At go-live, load what's already in PH Warehouse through the Pull API snapshot (page 6). Then call the event feed every few
+      minutes or once a day, from the last <code>seq</code> you saved, to recover anything missed during downtime.</p>
+  </div></div>
+</div>
+
+
+</section>
+
+<!-- ============================ FULL EXAMPLE ============================ -->
+<section>
+<h2>Complete example endpoint (Node.js)</h2>
+<p>Copy this, set the two environment variables, and adapt the database calls to your stack. It covers steps 2–5.
+PHP and Python versions are on page 9.</p>
+<pre><span class="k">import</span> express <span class="k">from</span> "express";
+<span class="k">import</span> crypto <span class="k">from</span> "node:crypto";
+<span class="k">import</span> pg <span class="k">from</span> "pg";
+
+<span class="k">const</span> SECRET = process.env.KPC_WEBHOOK_SECRET;   <span class="c">// from KPC, server-side only</span>
+<span class="k">const</span> db = <span class="k">new</span> pg.Pool({ connectionString: process.env.DATABASE_URL });
+<span class="k">const</span> app = express();
+
+<span class="k">function</span> isFromKpc(raw, ts, sig) {
+  <span class="k">const</span> expected = "sha256=" + crypto.createHmac("sha256", SECRET).update(`${ts}.${raw}`).digest("hex");
+  <span class="k">const</span> fresh = Math.abs(Date.now() / 1000 - Number(ts)) &lt; 300;           <span class="c">// within 5 minutes</span>
+  <span class="k">return</span> fresh &amp;&amp; sig.length === expected.length &amp;&amp;
+         crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+}
+
+<span class="c">// express.raw = keep the exact bytes KPC sent (needed for the signature)</span>
+app.post("/webhooks/kpc", express.raw({ type: "application/json" }), <span class="k">async</span> (req, res) => {
+  <span class="k">const</span> raw = req.body.toString("utf8");
+  <span class="k">if</span> (!isFromKpc(raw, req.get("X-KPC-Timestamp") ?? "", req.get("X-KPC-Signature") ?? "")) {
+    <span class="k">return</span> res.status(401).send("invalid signature");                      <span class="c">// step 2</span>
+  }
+
+  <span class="k">const</span> { event_id, occurred_at, shipment: s } = JSON.parse(raw);
+
+  <span class="k">const</span> dup = <span class="k">await</span> db.query(
+    "INSERT INTO kpc_events (event_id) VALUES ($1) ON CONFLICT DO NOTHING", [event_id]);
+  <span class="k">if</span> (dup.rowCount === 0) <span class="k">return</span> res.sendStatus(200);                    <span class="c">// step 3: already processed</span>
+
+  <span class="k">await</span> db.query(`
+    INSERT INTO kpc_shipments (shipment_id, shipment_code, delivery_status,
+                               ph_warehouse_tagged_at, delivered_at, data, last_event_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (shipment_id) DO UPDATE SET
+      shipment_code = EXCLUDED.shipment_code, delivery_status = EXCLUDED.delivery_status,
+      ph_warehouse_tagged_at = EXCLUDED.ph_warehouse_tagged_at, delivered_at = EXCLUDED.delivered_at,
+      data = EXCLUDED.data, last_event_at = EXCLUDED.last_event_at
+    WHERE kpc_shipments.last_event_at &lt; EXCLUDED.last_event_at`,               <span class="c">// step 4</span>
+    [s.shipment_id, s.shipment_code, s.delivery_status,
+     s.ph_warehouse_tagged_at, s.delivered_at, s, occurred_at]);
+
+  res.sendStatus(200);                                                     <span class="c">// step 5: reply fast</span>
+  liveUpdate(s);                         <span class="c">// optional: refresh open dashboards</span>
+});
+
+app.listen(3000);</pre>
+<div class="callout red"><b>The most common mistake</b>
+Using <code>express.json()</code> (or any body parser) before the webhook route. It changes the body, and the signature
+will never match. Use <code>express.raw()</code> on this route as shown.</div>
+</section>
+
+<!-- ============================ PAYLOAD ============================ -->
+<section>
+<h2>What you receive</h2>
+
+<p>Two events: <code>shipment.ph_warehouse</code> (status changed <b>to</b> PH Warehouse) and
+<code>shipment.delivered</code> (status changed <b>to</b> Delivered).</p>
+
+<h3>Headers</h3>
+<table class="fields">
+  <tr><th style="width:32%">Header</th><th>Meaning</th></tr>
+  <tr><td><code>X-KPC-Event</code></td><td>Event type, same as <code>event</code> in the body.</td></tr>
+  <tr><td><code>X-KPC-Event-Id</code></td><td>Unique ID. A retry of the same event keeps the same ID.</td></tr>
+  <tr><td><code>X-KPC-Timestamp</code></td><td>Unix seconds when this attempt was sent.</td></tr>
+  <tr><td><code>X-KPC-Signature</code></td><td><code>sha256=</code> + hex HMAC-SHA256 of <code>timestamp + "." + raw body</code>.</td></tr>
+</table>
+
+<div class="callout grey"><b>Good to know</b>
+<ul style="margin:0" class="small">
+  <li>Other statuses aren't sent. A shipment that's reverted and tagged again sends a new event. Bulk tagging sends one event per shipment.</li>
+  <li>Every body has the <b>full shipment</b>, not only what changed.</li>
+  <li>Times are ISO 8601 in <b>UTC</b>; add 8 hours for Manila time.</li>
+  <li>Any field can be <code>null</code>. <b>Ignore fields you don't know</b>; we may add more.</li>
+  <li><code>delivered_at</code> exists from go-live onward. Older shipments may have it empty.</li>
+</ul></div>
+
+<h3>Shipment fields</h3>
+<table class="fields">
+  <tr><th style="width:40%">Field</th><th style="width:15%">Type</th><th>Meaning</th></tr>
+  <tr><td><code>shipment_id</code></td><td>integer</td><td><b>Primary key.</b> Never changes.</td></tr>
+  <tr><td><code>shipment_code</code></td><td>text</td><td>Code shown to customers, e.g. <code>KPC 509509EC-9123</code></td></tr>
+  <tr><td><code>delivery_status</code></td><td>text</td><td><code>PH Warehouse</code> or <code>Delivered</code> at the time of the event</td></tr>
+  <tr><td><code>ph_warehouse_tagged_at</code></td><td>time · UTC</td><td>When first tagged PH Warehouse</td></tr>
+  <tr><td><code>delivered_at</code></td><td>time · UTC</td><td>When tagged Delivered</td></tr>
+  <tr><td><code>payment_status</code></td><td>text</td><td><code>Pending</code>, <code>For Review</code>, <code>Paid</code>, …</td></tr>
+  <tr><td><code>client_code</code> · <code>client_name</code> · <code>business_name</code></td><td>text</td><td>Customer</td></tr>
+  <tr><td><code>tracking_number</code> · <code>waybill_number</code> · <code>container_van</code></td><td>text</td><td>Reference numbers</td></tr>
+  <tr><td><code>quantity</code> · <code>box_quantity</code></td><td>number</td><td>Item and box counts</td></tr>
+  <tr><td><code>total_cbm</code> · <code>total_kgs</code></td><td>number</td><td>Volume and weight</td></tr>
+  <tr><td><code>source_warehouse</code> · <code>pickup_warehouse</code></td><td>text</td><td>Origin and pickup warehouse names</td></tr>
+  <tr><td><code>item_description</code></td><td>text[]</td><td>Items in the shipment</td></tr>
+  <tr><td><code>created_at</code></td><td>time · UTC</td><td>When the shipment was created</td></tr>
+  <tr><td><code>date_received</code></td><td>time · no zone</td><td>Date received, as entered by the admin</td></tr>
+</table>
+
+</section>
+
+<!-- ============================ PULL API ============================ -->
+<section>
+<h2>Pull API (first load and catch-up)</h2>
+<p>Read-only. Every call needs the header <code>x-api-key: &lt;your API key&gt;</code>; without it you get <code>401</code>.
+<code>{BASE_URL}</code> is provided at go-live.</p>
+
+<table>
+  <tr><th style="width:33%">Use it for</th><th>Call</th></tr>
+  <tr><td><b>First load</b>: what's in PH Warehouse right now</td><td><code>GET {BASE_URL}/snapshot?status=PH%20Warehouse</code></td></tr>
+  <tr><td><b>Catch-up</b>: every event since your last one</td><td><code>GET {BASE_URL}?after_seq=&lt;last seq&gt;</code></td></tr>
+</table>
+
+<h3>Snapshot: current shipments in a status</h3>
+<pre>curl "{BASE_URL}/snapshot?status=PH%20Warehouse&amp;after_id=0&amp;limit=500" -H "x-api-key: $KPC_API_KEY"
+
+{ "status": "PH Warehouse",
+  "shipments": [ { "shipment_id": 14648, "shipment_code": "KPC 509509EC-9123", … } ],
+  "next_after_id": 14648,
+  "has_more": false }</pre>
+<p class="small"><code>status</code> can be <code>PH Warehouse</code>, <code>Ready For Pickup</code>, <code>Warehouse Overstaying</code> or <code>Delivered</code>.
+While <code>has_more</code> is <code>true</code>, call again with <code>after_id=next_after_id</code>. <code>limit</code> is 1–1000, default 500.</p>
+
+<h3>Event feed: everything since a point</h3>
+<pre>curl "{BASE_URL}?after_seq=0&amp;limit=500" -H "x-api-key: $KPC_API_KEY"
+
+{ "events": [
+    { "seq": 1, "event_id": "dc4a079a-…", "event": "shipment.ph_warehouse", "occurred_at": "…", "shipment": { … } },
+    { "seq": 2, "event_id": "a824173b-…", "event": "shipment.delivered",   "occurred_at": "…", "shipment": { … } } ],
+  "next_after_seq": 2,
+  "has_more": false }</pre>
+<p class="small">Each event has the same body and <code>event_id</code> as the webhook, so feed each one through the <b>same handler</b>.
+Save <code>next_after_seq</code>, and use it in the next call.</p>
+
+<div class="callout blue"><b>Simple catch-up loop</b>
+<code>seq = saved_seq or 0</code> → call the feed with <code>after_seq=seq</code> → process each event like a webhook →
+save <code>next_after_seq</code> → repeat while <code>has_more</code>. Run it every few minutes or once a day.</div>
+</section>
+
+<!-- ============================ TESTING ============================ -->
+<section>
+<h2>Testing and go-live</h2>
+
+<h3>1. Check your signature code with this test vector</h3>
+<p>Before we connect anything, run your verification code with these exact values. It must produce the expected signature.</p>
+<table class="small">
+  <tr><th style="width:20%">Input</th><th>Value</th></tr>
+  <tr><td>Secret</td><td><code>kpc_test_secret_do_not_use</code></td></tr>
+  <tr><td>Timestamp</td><td><code>1760918400</code></td></tr>
+  <tr><td>Raw body</td><td><code style="white-space:normal">{"event": "shipment.ph_warehouse", "event_id": "11111111-2222-3333-4444-555555555555", "shipment": {"shipment_id": 1001, "shipment_code": "KPC TEST-0001"}, "occurred_at": "2026-10-20T00:00:00+00:00"}</code></td></tr>
+  <tr><td><b>Expected</b></td><td><code>sha256=b52505688e7186e3b94465d8d9be73aab8944da4d6561777c4d95882fa2639cf</code></td></tr>
+</table>
+<pre><span class="c"># check it from a terminal</span>
+printf '%s' '1760918400.{"event": "shipment.ph_warehouse", "event_id": "11111111-2222-3333-4444-555555555555", "shipment": {"shipment_id": 1001, "shipment_code": "KPC TEST-0001"}, "occurred_at": "2026-10-20T00:00:00+00:00"}' \
+  | openssl dgst -sha256 -hmac 'kpc_test_secret_do_not_use'</pre>
+<p class="small muted">The timestamp in this test is old, so turn off the 5-minute check while you test it.</p>
+
+<h3>2. Go-live checklist</h3>
+<table>
+  <tr><th style="width:5%">✓</th><th>Step</th><th style="width:12%">Who</th></tr>
+  <tr><td>☐</td><td>Send staging + production webhook URLs, the field list and the history range</td><td>You</td></tr>
+  <tr><td>☐</td><td>Send the signing secret, API key and Pull API URL securely</td><td>KPC</td></tr>
+  <tr><td>☐</td><td>Build the endpoint; pass the test vector above</td><td>You</td></tr>
+  <tr><td>☐</td><td>We tag test shipments on KPC staging → you confirm they appear on your staging dashboard</td><td>Both</td></tr>
+  <tr><td>☐</td><td>We switch production events to your production URL</td><td>KPC</td></tr>
+  <tr><td>☐</td><td>First load with <code>/snapshot</code>, then start the catch-up feed from <code>after_seq=0</code></td><td>You</td></tr>
+  <tr><td>☐</td><td>Historical data (if needed): agreed separately, delivered as a one-time export</td><td>Both</td></tr>
+</table>
+
+<h3>3. Delivery and retries</h3>
+<table class="small">
+  <tr><th style="width:30%">Your server replies</th><th>What KPC does</th></tr>
+  <tr><td><code>2xx</code> within 10 s</td><td>Done. The event is marked delivered.</td></tr>
+  <tr><td>Anything else, a timeout, or offline</td><td>Retries after about 2, 4, 8, 16 and 32 min, then hourly: <b>12 tries, about 7 hours</b>.
+      After that, the event is still in the Pull API.</td></tr>
+</table>
+</section>
+
+<!-- ============================ TROUBLESHOOTING ============================ -->
+<section>
+<h2>Troubleshooting and FAQ</h2>
+<table>
+  <tr><th style="width:32%">Problem</th><th>Fix</th></tr>
+  <tr><td>Signature never matches</td><td>Sign the <b>raw</b> body, not parsed and re-serialized JSON. Use <code>timestamp + "." + body</code>.
+      Check the secret has no extra spaces or line breaks. Test with the vector on page 7.</td></tr>
+  <tr><td>Some updates are missing</td><td>Your server was down or replied non-2xx. Run the catch-up feed from your last <code>seq</code>; every event is there.</td></tr>
+  <tr><td>Same event received twice</td><td>Normal now and then. Skip it by <code>event_id</code>.</td></tr>
+  <tr><td>A delivered shipment shows PH Warehouse</td><td>An older event overwrote a newer one. Only apply an event when <code>occurred_at</code> is newer.</td></tr>
+  <tr><td>Dashboard doesn't change until refresh</td><td>Your data is up to date; your screen isn't. After saving, push the update to open pages (step 5, page 3).</td></tr>
+  <tr><td>Pull API returns 401</td><td>The header must be exactly <code>x-api-key</code>. Ask us if the key may have been rotated.</td></tr>
+  <tr><td>Status changed, but no event</td><td>Only changes <b>to</b> PH Warehouse or Delivered are sent. Use <code>/snapshot</code> for other statuses.</td></tr>
+</table>
+
+<h3>FAQ</h3>
+<p><b>Is it real-time?</b> Yes. KPC pushes to your server the moment the admin confirms. In testing it took 0.03 seconds.</p>
+<p><b>Do we need to poll?</b> No. The Pull API is only for the first load and for catching up after downtime.</p>
+<p><b>Why not a direct database connection or a Supabase key?</b> That would expose all KPC data, including other customers'
+personal information. With the webhook you receive only the fields agreed for your dashboard.</p>
+<p><b>Why a webhook and not a WebSocket?</b> A WebSocket loses any update made while you're disconnected. A webhook is retried
+until your server accepts it, so nothing is missed. You can still use WebSockets <i>inside</i> your system to update open screens.</p>
+<p><b>How do we compute fulfillment rate?</b> Both timestamps come with every shipment. For example: <i>delivered this month ÷ arrived at PH Warehouse this month</i>, or the <i>average days from <code>ph_warehouse_tagged_at</code> to <code>delivered_at</code></i>. Use your team's definition.</p>
+<p><b>Can we get more fields?</b> Yes. Tell us which ones and we'll add them. Your code should already ignore unknown fields.</p>
+<p><b>What if a secret or key leaks?</b> Tell us right away. We'll issue a new one, and the old one stops working.</p>
+
+<div class="callout grey"><b>Need help?</b>
+Contact the KPC development team with the <code>event_id</code> or <code>shipment_code</code>, the time it happened, and your server's response.
+We can resend specific events, add fields, change your URL, or rotate keys.</div>
+</section>
+
+<!-- ============================ OTHER LANGUAGES ============================ -->
+<section>
+<h2>Code in PHP and Python</h2>
+
+<h3>PHP (Laravel or plain PHP)</h3>
+<pre>$raw = file_get_contents('php://input');                       <span class="c">// raw body, before json_decode</span>
+$ts  = $_SERVER['HTTP_X_KPC_TIMESTAMP'] ?? '';
+$sig = $_SERVER['HTTP_X_KPC_SIGNATURE'] ?? '';
+
+$expected = 'sha256=' . hash_hmac('sha256', $ts . '.' . $raw, getenv('KPC_WEBHOOK_SECRET'));
+if (abs(time() - (int)$ts) > 300 || !hash_equals($expected, $sig)) {
+    http_response_code(401); exit('invalid signature');
+}
+
+$event = json_decode($raw, true);
+$s     = $event['shipment'];
+
+<span class="c">// 1. skip duplicates</span>
+$stmt = $pdo->prepare('INSERT INTO kpc_events (event_id) VALUES (?) ON CONFLICT DO NOTHING');
+$stmt->execute([$event['event_id']]);
+if ($stmt->rowCount() === 0) { http_response_code(200); exit; }
+
+<span class="c">// 2. upsert, newer only (same SQL as page 3)</span>
+$pdo->prepare($UPSERT_SQL)->execute([$s['shipment_id'], $s['shipment_code'], $s['delivery_status'],
+    $s['ph_warehouse_tagged_at'], $s['delivered_at'], json_encode($s), $event['occurred_at']]);
+
+http_response_code(200);</pre>
+<p class="small muted">In Laravel, use <code>$request->getContent()</code> for the raw body and exclude the route from CSRF protection.</p>
+
+<h3>Python (FastAPI)</h3>
+<pre><span class="k">import</span> hmac, hashlib, os, time, json
+<span class="k">from</span> fastapi <span class="k">import</span> FastAPI, Request, Response
+
+app = FastAPI()
+SECRET = os.environ["KPC_WEBHOOK_SECRET"].encode()
+
+<span class="k">def</span> is_from_kpc(raw: bytes, ts: str, sig: str) -> bool:
+    expected = "sha256=" + hmac.new(SECRET, f"{ts}.".encode() + raw, hashlib.sha256).hexdigest()
+    <span class="k">return</span> abs(time.time() - int(ts <span class="k">or</span> 0)) &lt; 300 <span class="k">and</span> hmac.compare_digest(expected, sig)
+
+@app.post("/webhooks/kpc")
+<span class="k">async def</span> kpc_webhook(request: Request):
+    raw = <span class="k">await</span> request.body()                               <span class="c"># raw bytes</span>
+    <span class="k">if not</span> is_from_kpc(raw, request.headers.get("x-kpc-timestamp", ""),
+                       request.headers.get("x-kpc-signature", "")):
+        <span class="k">return</span> Response(status_code=401)
+    event = json.loads(raw)
+    <span class="k">if</span> already_processed(event["event_id"]):                 <span class="c"># INSERT … ON CONFLICT DO NOTHING</span>
+        <span class="k">return</span> Response(status_code=200)
+    upsert_newer_only(event["shipment"], event["occurred_at"])   <span class="c"># same SQL as page 3</span>
+    <span class="k">return</span> Response(status_code=200)</pre>
+</section>
+
+</body>
+</html>

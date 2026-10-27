@@ -1,0 +1,5 @@
+.secrets/
+example-dashboard/.env
+example-dashboard/dashboard.db
+.DS_Store
+supabase/.temp/
